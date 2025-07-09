@@ -1,1 +1,1 @@
-worker: python namo.py
+web: python namo.py
