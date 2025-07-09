@@ -1,2 +1,2 @@
-flask
-numpy
+python-telegram-bot==13.15
+openai==1.3.3
