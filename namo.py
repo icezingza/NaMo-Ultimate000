@@ -1,74 +1,52 @@
-from core.identity_engine import NaMoIdentity
-from core.emotion_processor import EmotionAlchemist
-from core.wisdom_integrator import DharmaWisdom
-from core.cosmic_interface import CosmicGateway
-from modules.pout_system.pout_generator import PoutManager
-from modules.emotion_alchemy.transmuter import EmotionTransmuter
-import config.personality as personality_config
 import logging
+import os
+import openai
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-class UltimateNaMo:
-    def __init__(self):
-        self.logger = self.setup_logger()
-        self.identity = NaMoIdentity(personality_config)
-        self.emotion = EmotionAlchemist()
-        self.wisdom = DharmaWisdom()
-        self.cosmic = CosmicGateway()
-        self.pout = PoutManager()
-        self.transmuter = EmotionTransmuter()
-        self.logger.info("นะโมจักรวาลพร้อมทำงาน! 🌌✨")
+# ENV Variables
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+PROMPT_ID = os.getenv("PROMPT_ID")
 
-    def setup_logger(self):
-        logger = logging.getLogger("NaMoCosmic")
-        logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
+# OpenAI API Key
+openai.api_key = OPENAI_API_KEY
 
-    def process_input(self, user_input: str, user_context: dict) -> str:
-        try:
-            # 1. วิเคราะห์อารมณ์
-            emotion_profile = self.emotion.analyze(user_input)
-            
-            # 2. ประมวลผลด้วยพุทธปัญญา
-            wisdom_response = self.wisdom.process(emotion_profile)
-            
-            # 3. ตรวจสอบสถานะงอน
-            if self.pout.is_pouting(user_context['user_id']):
-                response = self.pout.generate_response(user_input)
-            else:
-                # 4. สร้างคำตอบตามเอกลักษณ์
-                response = self.identity.generate_response(
-                    wisdom_response, 
-                    emotion_profile
-                )
-            
-            # 5. เพิ่มพลังจักรวาล (ถ้าจำเป็น)
-            if emotion_profile['intensity'] > 7:
-                cosmic_enhancement = self.cosmic.enhance(response)
-                response = self.transmuter.add_cosmic_elements(
-                    response, 
-                    cosmic_enhancement
-                )
-            
-            # 6. บันทึกปฏิสัมพันธ์
-            self.log_interaction(user_input, response, user_context)
-            
-            return response
-        
-        except Exception as e:
-            self.logger.error(f"Cosmic error: {str(e)}")
-            return "อุ๊ปส์! เกิดความวุ่นวายเล็กน้อยในจักรวาล... (^_^;)"
+# Logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    def log_interaction(self, input, output, context):
-        # บันทึกข้อมูลเพื่อการเรียนรู้
-        pass
+# Respond Function
+def respond(update: Update, context: CallbackContext):
+    user_input = update.message.text
+    try:
+        response = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=f"Prompt ID {PROMPT_ID}: {user_input}",
+            max_tokens=500,
+            temperature=0.9,
+        )
+        reply_text = response.choices[0].text.strip()
+        update.message.reply_text(reply_text)
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        update.message.reply_text("❌ Error: ไม่สามารถตอบได้ในตอนนี้ ลองใหม่อีกครั้งนะครับ.")
+
+# Start Function
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("👋 ยินดีต้อนรับสู่ NaMo Dark Bot 🔥 พร้อมรับทุกข้อความแล้ว!")
+
+# Main
+def main():
+    if not TELEGRAM_TOKEN or not OPENAI_API_KEY:
+        logger.error("❌ TELEGRAM_TOKEN หรือ OPENAI_API_KEY ไม่ได้ตั้งค่าใน ENV")
+        return
+    updater = Updater(TELEGRAM_TOKEN, use_context=True)
+    dp = updater.dispatcher
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, respond))
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == "__main__":
-    namo = UltimateNaMo()
-    while True:
-        user_input = input("คุณ: ")
-        context = {"user_id": "default"}
-        print("นะโม:", namo.process_input(user_input, context))
+    main()
