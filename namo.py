@@ -2,7 +2,10 @@ import logging
 import os
 import openai
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler,
+    ContextTypes, filters
+)
 
 # ENV Variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -13,40 +16,44 @@ PROMPT_ID = os.getenv("PROMPT_ID")
 openai.api_key = OPENAI_API_KEY
 
 # Logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 # Respond Function
-def respond(update: Update, context: CallbackContext):
+async def respond(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text
     try:
         response = openai.Completion.create(
-            model="text-davinci-003",
-            prompt=f"Prompt ID {PROMPT_ID}: {user_input}",
-            max_tokens=500,
-            temperature=0.9,
+            engine="text-davinci-003",
+            prompt=user_input,
+            max_tokens=150
         )
-        reply_text = response.choices[0].text.strip()
-        update.message.reply_text(reply_text)
+        await update.message.reply_text(response.choices[0].text.strip())
     except Exception as e:
         logger.error(f"Error: {e}")
-        update.message.reply_text("❌ Error: ไม่สามารถตอบได้ในตอนนี้ ลองใหม่อีกครั้งนะครับ.")
+        await update.message.reply_text("เกิดข้อผิดพลาดในการเชื่อมต่อ OpenAI API 😢")
 
-# Start Function
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("👋 ยินดีต้อนรับสู่ NaMo Dark Bot 🔥 พร้อมรับทุกข้อความแล้ว!")
+# Start Command
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👋 สวัสดี! NaMo Dark Bot พร้อมแล้ว 🔥 พิมพ์ข้อความมาได้เลย!")
 
-# Main
-def main():
+# Main Function
+async def main():
     if not TELEGRAM_TOKEN or not OPENAI_API_KEY:
         logger.error("❌ TELEGRAM_TOKEN หรือ OPENAI_API_KEY ไม่ได้ตั้งค่าใน ENV")
         return
-    updater = Updater(TELEGRAM_TOKEN, use_context=True)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, respond))
-    updater.start_polling()
-    updater.idle()
+
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, respond))
+
+    logger.info("🔥 NaMo Dark Bot พร้อมทำงานแล้ว!")
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
