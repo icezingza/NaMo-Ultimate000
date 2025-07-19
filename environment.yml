@@ -1,0 +1,8 @@
+name: namo-ultimate-env
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy
+  - pandas
+  # Add other required packages here
