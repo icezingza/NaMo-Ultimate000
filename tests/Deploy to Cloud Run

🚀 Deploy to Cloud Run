@@ -1,0 +1,5 @@
+gcloud run deploy namo-memory-api \
+  --source . \
+  --platform managed \
+  --region asia-southeast1 \
+  --set-env-vars=PROJECT_ID=your-project-id
