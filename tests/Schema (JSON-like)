@@ -1,0 +1,5 @@
+{
+  "memory_id": "uuid",
+  "content": "string",
+  "expiration_time": "timestamp"
+}
