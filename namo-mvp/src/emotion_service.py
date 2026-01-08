@@ -3,11 +3,10 @@ from transformers import pipeline
 
 class EmotionService:
     def __init__(self):
-        # ⚡ Bolt: Lazily load the model to speed up application startup.
-        # The model will be loaded on the first call to analyze_sentiment.
         self.emotion_classifier = None
 
     def analyze_sentiment(self, text: str) -> Dict:
+        # Lazy load the model on first use for faster startup
         if self.emotion_classifier is None:
             self.emotion_classifier = pipeline(
                 "sentiment-analysis",
