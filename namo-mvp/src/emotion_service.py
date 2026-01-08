@@ -4,24 +4,17 @@ from transformers import pipeline
 class EmotionService:
     def __init__(self):
         # ⚡ Bolt: Lazily load the model to speed up application startup.
-        # The model will only be loaded into memory on the first call to analyze_sentiment.
+        # The model will be loaded on the first call to analyze_sentiment.
         self.emotion_classifier = None
 
-    def _get_classifier(self):
-        """Loads the sentiment analysis model on first use."""
+    def analyze_sentiment(self, text: str) -> Dict:
         if self.emotion_classifier is None:
-            # This is an expensive operation and should only happen once.
             self.emotion_classifier = pipeline(
                 "sentiment-analysis",
                 model="distilbert-base-uncased-finetuned-sst-2-english"
             )
-        return self.emotion_classifier
-
-    def analyze_sentiment(self, text: str) -> Dict:
         try:
-            # Get the classifier, which will be loaded if it hasn't been already.
-            classifier = self._get_classifier()
-            result = classifier(text[:512])[0]
+            result = self.emotion_classifier(text[:512])[0]
             sentiment = result['label']
             score = result['score']
 

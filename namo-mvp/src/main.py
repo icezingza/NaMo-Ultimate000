@@ -125,30 +125,22 @@ async def analyze_emotion(text: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-class DharmaRequest(BaseModel):
-    problem: str
-    emotion: str = "sadness"
-    intensity: float = 5.0
-
 @app.post("/namo/dharma-guidance")
-async def get_dharma_guidance(request: DharmaRequest):
+async def get_dharma_guidance(problem: str, emotion: str = "sadness",
+                             intensity: float = 5.0):
     try:
         guidance = dharma_service.apply_four_noble_truths(
-            request.problem, request.emotion, request.intensity
+            problem, emotion, intensity
         )
         return guidance
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-class CrisisCheckRequest(BaseModel):
-    user_id: str
-    message: str
-
 @app.post("/namo/crisis-check")
-async def crisis_check(request: CrisisCheckRequest):
+async def crisis_check(user_id: str, message: str):
     try:
-        analysis = emotion_service.analyze_sentiment(request.message)
-        crisis = safety_service.detect_crisis(request.message, request.user_id, analysis['intensity'])
+        analysis = emotion_service.analyze_sentiment(message)
+        crisis = safety_service.detect_crisis(message, user_id, analysis['intensity'])
         return crisis
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
