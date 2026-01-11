@@ -21,6 +21,22 @@ class Memory:
 class MemoryService:
     def __init__(self):
         self.memory_store: Dict[str, List[Memory]] = {}
+        self._emotion_to_group_map = self._create_emotion_map()
+
+    def _create_emotion_map(self) -> Dict[str, str]:
+        # Bolt ⚡: Pre-compute a reverse map for O(1) emotion group lookups.
+        # This avoids iterating the emotion_groups dictionary on every call to _is_related_emotion.
+        emotion_groups = {
+            "sad": ["sadness", "depression", "grief", "loss", "unhappy"],
+            "anxious": ["anxiety", "fear", "worry", "stressed", "nervous"],
+            "angry": ["anger", "rage", "irritated", "frustrated", "resentment"],
+            "happy": ["joy", "happiness", "contentment", "peace", "gratitude"]
+        }
+        emotion_map = {}
+        for group, emotions in emotion_groups.items():
+            for emotion in emotions:
+                emotion_map[emotion] = group
+        return emotion_map
 
     def store_experience(self, user_id: str, event: str, emotion: str,
                         emotion_intensity: float, dharma_insight: str = ""):
@@ -83,17 +99,10 @@ class MemoryService:
         return linked[:10]
 
     def _is_related_emotion(self, emotion1: str, emotion2: str) -> bool:
-        emotion_groups = {
-            "sad": ["sadness", "depression", "grief", "loss", "unhappy"],
-            "anxious": ["anxiety", "fear", "worry", "stressed", "nervous"],
-            "angry": ["anger", "rage", "irritated", "frustrated", "resentment"],
-            "happy": ["joy", "happiness", "contentment", "peace", "gratitude"]
-        }
-
-        for group, emotions in emotion_groups.items():
-            if emotion1.lower() in emotions and emotion2.lower() in emotions:
-                return True
-        return False
+        # Bolt ⚡: Optimized from O(N) to O(1) using the pre-computed map.
+        group1 = self._emotion_to_group_map.get(emotion1.lower())
+        group2 = self._emotion_to_group_map.get(emotion2.lower())
+        return group1 is not None and group1 == group2
 
     def analyze_memory_pattern(self, user_id: str) -> Dict:
         if user_id not in self.memory_store:
