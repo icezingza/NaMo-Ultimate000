@@ -147,7 +147,7 @@ async def crisis_check(user_id: str, message: str):
 
 if __name__ == "__main__":
     uvicorn.run(
-        app,
+        "main:app",
         host=config.API_HOST,
         port=config.API_PORT,
         reload=config.DEBUG
