@@ -21,6 +21,17 @@ class Memory:
 class MemoryService:
     def __init__(self):
         self.memory_store: Dict[str, List[Memory]] = {}
+        self._emotion_groups = {
+            "sad": ["sadness", "depression", "grief", "loss", "unhappy"],
+            "anxious": ["anxiety", "fear", "worry", "stressed", "nervous"],
+            "angry": ["anger", "rage", "irritated", "frustrated", "resentment"],
+            "happy": ["joy", "happiness", "contentment", "peace", "gratitude"]
+        }
+        self._emotion_to_group_map = {
+            emotion: group
+            for group, emotions in self._emotion_groups.items()
+            for emotion in emotions
+        }
 
     def store_experience(self, user_id: str, event: str, emotion: str,
                         emotion_intensity: float, dharma_insight: str = ""):
@@ -83,17 +94,11 @@ class MemoryService:
         return linked[:10]
 
     def _is_related_emotion(self, emotion1: str, emotion2: str) -> bool:
-        emotion_groups = {
-            "sad": ["sadness", "depression", "grief", "loss", "unhappy"],
-            "anxious": ["anxiety", "fear", "worry", "stressed", "nervous"],
-            "angry": ["anger", "rage", "irritated", "frustrated", "resentment"],
-            "happy": ["joy", "happiness", "contentment", "peace", "gratitude"]
-        }
-
-        for group, emotions in emotion_groups.items():
-            if emotion1.lower() in emotions and emotion2.lower() in emotions:
-                return True
-        return False
+        # ⚡ Bolt: Optimized emotion group lookup from O(n) to O(1)
+        # Pre-computed map avoids iterating lists, making lookups constant time.
+        group1 = self._emotion_to_group_map.get(emotion1.lower())
+        group2 = self._emotion_to_group_map.get(emotion2.lower())
+        return group1 is not None and group1 == group2
 
     def analyze_memory_pattern(self, user_id: str) -> Dict:
         if user_id not in self.memory_store:
