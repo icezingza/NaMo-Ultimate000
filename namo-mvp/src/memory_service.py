@@ -22,6 +22,20 @@ class MemoryService:
     def __init__(self):
         self.memory_store: Dict[str, List[Memory]] = {}
 
+        # Performance Optimization: Pre-compute a reverse lookup map for emotion groups.
+        # This turns the O(n) search in _is_related_emotion into an O(1) lookup.
+        self._emotion_groups = {
+            "sad": ["sadness", "depression", "grief", "loss", "unhappy"],
+            "anxious": ["anxiety", "fear", "worry", "stressed", "nervous"],
+            "angry": ["anger", "rage", "irritated", "frustrated", "resentment"],
+            "happy": ["joy", "happiness", "contentment", "peace", "gratitude"]
+        }
+        self._emotion_to_group_map = {
+            emotion: group
+            for group, emotions in self._emotion_groups.items()
+            for emotion in emotions
+        }
+
     def store_experience(self, user_id: str, event: str, emotion: str,
                         emotion_intensity: float, dharma_insight: str = ""):
         memory_id = f"{user_id}_{int(time.time()*1000)}"
@@ -83,17 +97,10 @@ class MemoryService:
         return linked[:10]
 
     def _is_related_emotion(self, emotion1: str, emotion2: str) -> bool:
-        emotion_groups = {
-            "sad": ["sadness", "depression", "grief", "loss", "unhappy"],
-            "anxious": ["anxiety", "fear", "worry", "stressed", "nervous"],
-            "angry": ["anger", "rage", "irritated", "frustrated", "resentment"],
-            "happy": ["joy", "happiness", "contentment", "peace", "gratitude"]
-        }
-
-        for group, emotions in emotion_groups.items():
-            if emotion1.lower() in emotions and emotion2.lower() in emotions:
-                return True
-        return False
+        # O(1) lookup using the pre-computed map.
+        group1 = self._emotion_to_group_map.get(emotion1.lower())
+        group2 = self._emotion_to_group_map.get(emotion2.lower())
+        return group1 is not None and group1 == group2
 
     def analyze_memory_pattern(self, user_id: str) -> Dict:
         if user_id not in self.memory_store:
