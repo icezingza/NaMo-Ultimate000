@@ -21,6 +21,23 @@ class Memory:
 class MemoryService:
     def __init__(self):
         self.memory_store: Dict[str, List[Memory]] = {}
+        # ⚡ Bolt: Pre-compute a reverse map for O(1) emotion group lookups.
+        # This prevents iterating through all emotion groups on every check.
+        self.emotion_to_group_map = self._create_emotion_map()
+
+    def _create_emotion_map(self) -> Dict[str, str]:
+        """Creates a reverse map from an emotion to its group for O(1) lookups."""
+        emotion_groups = {
+            "sad": ["sadness", "depression", "grief", "loss", "unhappy"],
+            "anxious": ["anxiety", "fear", "worry", "stressed", "nervous"],
+            "angry": ["anger", "rage", "irritated", "frustrated", "resentment"],
+            "happy": ["joy", "happiness", "contentment", "peace", "gratitude"]
+        }
+        reverse_map = {}
+        for group, emotions in emotion_groups.items():
+            for emotion in emotions:
+                reverse_map[emotion] = group
+        return reverse_map
 
     def store_experience(self, user_id: str, event: str, emotion: str,
                         emotion_intensity: float, dharma_insight: str = ""):
@@ -83,17 +100,17 @@ class MemoryService:
         return linked[:10]
 
     def _is_related_emotion(self, emotion1: str, emotion2: str) -> bool:
-        emotion_groups = {
-            "sad": ["sadness", "depression", "grief", "loss", "unhappy"],
-            "anxious": ["anxiety", "fear", "worry", "stressed", "nervous"],
-            "angry": ["anger", "rage", "irritated", "frustrated", "resentment"],
-            "happy": ["joy", "happiness", "contentment", "peace", "gratitude"]
-        }
+        """
+        Checks if two emotions belong to the same group using a pre-computed map.
+        Time complexity: O(1) on average.
+        """
+        e1_lower = emotion1.lower()
+        e2_lower = emotion2.lower()
 
-        for group, emotions in emotion_groups.items():
-            if emotion1.lower() in emotions and emotion2.lower() in emotions:
-                return True
-        return False
+        group1 = self.emotion_to_group_map.get(e1_lower)
+        group2 = self.emotion_to_group_map.get(e2_lower)
+
+        return group1 is not None and group1 == group2
 
     def analyze_memory_pattern(self, user_id: str) -> Dict:
         if user_id not in self.memory_store:
