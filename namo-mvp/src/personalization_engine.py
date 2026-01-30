@@ -1,6 +1,5 @@
 from typing import Dict, List
 from memory_service import memory_service
-from emotion_service import emotion_service
 
 class PersonalizationEngine:
     def __init__(self):
@@ -8,16 +7,22 @@ class PersonalizationEngine:
 
     def generate_personalized_response(self, user_id: str,
                                       current_emotion: str,
-                                      current_message: str) -> Dict:
-        user_memories = memory_service.retrieve_user_context(user_id, days_back=30)
-        user_pattern = memory_service.analyze_memory_pattern(user_id)
-        linked_memories = memory_service.find_linked_memories(user_id, current_emotion)
-
-        current_analysis = emotion_service.analyze_sentiment(current_message)
+                                      current_intensity: float) -> Dict:
+        """
+        Generates a personalized response using pre-calculated emotion data.
+        Optimization:
+        1. Eliminated redundant call to emotion_service.analyze_sentiment (BERT model).
+        2. Consolidated multiple memory lookups into a single call.
+        """
+        # Consolidated memory insights in a single pass
+        insights = memory_service.get_user_insights(user_id, current_emotion, days_back=30)
+        user_memories = insights['relevant_memories']
+        user_pattern = insights['user_pattern']
+        linked_memories = insights['linked_memories']
 
         base_response = self._generate_base_compassion_response(
             current_emotion,
-            current_analysis['intensity']
+            current_intensity
         )
 
         personalized_response = self._enhance_with_context(
@@ -31,13 +36,13 @@ class PersonalizationEngine:
         return {
             "personalized_response": personalized_response,
             "emotion": current_emotion,
-            "intensity": current_analysis['intensity'],
+            "intensity": current_intensity,
             "user_pattern": user_pattern,
             "similar_past_experiences": len(linked_memories),
             "recommendations": self._generate_recommendations(
                 current_emotion,
                 user_pattern,
-                current_analysis['intensity']
+                current_intensity
             )
         }
 
