@@ -1,0 +1,3 @@
+## 2024-05-22 - [Redundant BERT model calls]
+**Learning:** In projects using heavy machine learning models (like BERT for sentiment analysis), redundant calls to `pipeline` or model inference can be a major performance bottleneck. In this codebase, `PersonalizationEngine` was calling `emotion_service.analyze_sentiment` even though the analysis was already performed in the main request handler. Model inference took ~15ms per call, while in-memory operations took <0.2ms.
+**Action:** Consolidate model inference at the entry point and pass the results (like emotion intensity) down to other services. Avoid passing raw messages if only the sentiment analysis result is needed.
