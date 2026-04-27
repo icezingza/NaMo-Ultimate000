@@ -9,9 +9,11 @@ class PersonalizationEngine:
     def generate_personalized_response(self, user_id: str,
                                       current_emotion: str,
                                       current_message: str) -> Dict:
-        user_memories = memory_service.retrieve_user_context(user_id, days_back=30)
-        user_pattern = memory_service.analyze_memory_pattern(user_id)
-        linked_memories = memory_service.find_linked_memories(user_id, current_emotion)
+        # ⚡ Bolt Optimization: Replaced three separate calls with a single, comprehensive analysis call.
+        analysis = memory_service.get_comprehensive_user_analysis(user_id, current_emotion)
+        user_memories = analysis["user_context"]
+        user_pattern = analysis["memory_pattern"]
+        linked_memories = analysis["linked_memories"]
 
         current_analysis = emotion_service.analyze_sentiment(current_message)
 
