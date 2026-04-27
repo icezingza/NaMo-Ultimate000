@@ -8,16 +8,20 @@ class PersonalizationEngine:
 
     def generate_personalized_response(self, user_id: str,
                                       current_emotion: str,
-                                      current_message: str) -> Dict:
-        user_memories = memory_service.retrieve_user_context(user_id, days_back=30)
-        user_pattern = memory_service.analyze_memory_pattern(user_id)
-        linked_memories = memory_service.find_linked_memories(user_id, current_emotion)
+                                      current_intensity: float) -> Dict:
+        """
+        Generates a response using pre-computed emotion intensity and
+        consolidated memory insights for better performance.
+        """
+        insights = memory_service.get_user_insights(user_id, current_emotion, days_back=30)
 
-        current_analysis = emotion_service.analyze_sentiment(current_message)
+        user_memories = insights['relevant_memories']
+        user_pattern = insights['pattern']
+        linked_memories = insights['linked_memories']
 
         base_response = self._generate_base_compassion_response(
             current_emotion,
-            current_analysis['intensity']
+            current_intensity
         )
 
         personalized_response = self._enhance_with_context(
@@ -31,13 +35,13 @@ class PersonalizationEngine:
         return {
             "personalized_response": personalized_response,
             "emotion": current_emotion,
-            "intensity": current_analysis['intensity'],
+            "intensity": current_intensity,
             "user_pattern": user_pattern,
             "similar_past_experiences": len(linked_memories),
             "recommendations": self._generate_recommendations(
                 current_emotion,
                 user_pattern,
-                current_analysis['intensity']
+                current_intensity
             )
         }
 

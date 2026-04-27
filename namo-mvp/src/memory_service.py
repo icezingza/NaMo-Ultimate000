@@ -117,4 +117,68 @@ class MemoryService:
             "trend": "improving" if len(memories) > 0 and memories[-1].emotion_intensity < avg_intensity else "stable"
         }
 
+    def get_user_insights(self, user_id: str, current_emotion: str, days_back: int = 30) -> Dict:
+        """
+        Consolidates context retrieval, pattern analysis, and similarity searches
+        into a single pass over user memories to avoid redundant O(N) iterations.
+        """
+        if user_id not in self.memory_store:
+            return {
+                "relevant_memories": [],
+                "pattern": {"pattern": "no data"},
+                "linked_memories": []
+            }
+
+        memories = self.memory_store[user_id]
+        cutoff_time = time.time() - (days_back * 24 * 3600)
+
+        relevant_memories = []
+        emotion_counts = {}
+        total_intensity = 0
+        linked = []
+
+        for m in memories:
+            # For pattern analysis
+            emotion_counts[m.emotion] = emotion_counts.get(m.emotion, 0) + 1
+            total_intensity += m.emotion_intensity
+
+            # For context retrieval
+            if m.timestamp >= cutoff_time:
+                relevant_memories.append(m)
+
+            # For linked memories (similarity search)
+            similarity = 0.5
+            if m.emotion.lower() == current_emotion.lower():
+                similarity = 0.9
+            elif self._is_related_emotion(m.emotion, current_emotion):
+                similarity = 0.75
+
+            if similarity >= 0.7: # Using default threshold from find_linked_memories
+                linked.append({
+                    "memory": m.to_dict(),
+                    "similarity_score": similarity
+                })
+
+        # Post-processing
+        relevant_memories.sort(key=lambda x: (x.importance, x.timestamp), reverse=True)
+
+        avg_intensity = total_intensity / len(memories) if memories else 0
+        most_common_emotion = max(emotion_counts.items(), key=lambda x: x[1])[0] if emotion_counts else "unknown"
+
+        pattern = {
+            "total_memories": len(memories),
+            "avg_emotional_intensity": round(avg_intensity, 2),
+            "most_common_emotion": most_common_emotion,
+            "emotion_distribution": emotion_counts,
+            "trend": "improving" if len(memories) > 0 and memories[-1].emotion_intensity < avg_intensity else "stable"
+        }
+
+        linked.sort(key=lambda x: x["similarity_score"], reverse=True)
+
+        return {
+            "relevant_memories": [m.to_dict() for m in relevant_memories],
+            "pattern": pattern,
+            "linked_memories": linked[:10]
+        }
+
 memory_service = MemoryService()
