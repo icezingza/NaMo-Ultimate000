@@ -117,4 +117,72 @@ class MemoryService:
             "trend": "improving" if len(memories) > 0 and memories[-1].emotion_intensity < avg_intensity else "stable"
         }
 
+    def get_user_insights(self, user_id: str, current_emotion: str, days_back: int = 30) -> Dict:
+        """
+        Consolidates retrieval, pattern analysis, and linked memory search into a single pass.
+        Optimization: Reduces O(N) iterations and redundant processing.
+        """
+        if user_id not in self.memory_store:
+            return {
+                "relevant_memories": [],
+                "user_pattern": {"pattern": "no data"},
+                "linked_memories": []
+            }
+
+        memories = self.memory_store[user_id]
+        cutoff_time = time.time() - (days_back * 24 * 3600)
+
+        relevant_memories_obj = []
+        emotion_counts = {}
+        total_intensity = 0
+        linked = []
+
+        for m in memories:
+            # For retrieve_user_context
+            if m.timestamp >= cutoff_time:
+                relevant_memories_obj.append(m)
+
+            # For analyze_memory_pattern
+            emotion_counts[m.emotion] = emotion_counts.get(m.emotion, 0) + 1
+            total_intensity += m.emotion_intensity
+
+            # For find_linked_memories
+            if m.emotion.lower() == current_emotion.lower():
+                similarity = 0.9
+            elif self._is_related_emotion(m.emotion, current_emotion):
+                similarity = 0.75
+            else:
+                similarity = 0.5
+
+            if similarity >= 0.7: # Default similarity_threshold
+                linked.append({
+                    "memory": m.to_dict(),
+                    "similarity_score": similarity
+                })
+
+        # Process retrieve_user_context
+        relevant_memories_obj.sort(key=lambda x: (x.importance, x.timestamp), reverse=True)
+        relevant_memories = [m.to_dict() for m in relevant_memories_obj]
+
+        # Process analyze_memory_pattern
+        avg_intensity = total_intensity / len(memories) if memories else 0
+        most_common_emotion = max(emotion_counts.items(), key=lambda x: x[1])[0] if emotion_counts else "unknown"
+        user_pattern = {
+            "total_memories": len(memories),
+            "avg_emotional_intensity": round(avg_intensity, 2),
+            "most_common_emotion": most_common_emotion,
+            "emotion_distribution": emotion_counts,
+            "trend": "improving" if len(memories) > 0 and memories[-1].emotion_intensity < avg_intensity else "stable"
+        }
+
+        # Process find_linked_memories
+        linked.sort(key=lambda x: x["similarity_score"], reverse=True)
+        linked_memories = linked[:10]
+
+        return {
+            "relevant_memories": relevant_memories,
+            "user_pattern": user_pattern,
+            "linked_memories": linked_memories
+        }
+
 memory_service = MemoryService()
