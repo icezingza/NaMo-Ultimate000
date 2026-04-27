@@ -59,7 +59,7 @@ async def namo_interact(user_msg: UserMessage):
             return crisis_response
 
         personalized = personalization_engine.generate_personalized_response(
-            user_id, emotion, message
+            user_id, emotion, intensity
         )
 
         dharma_analysis = dharma_service.apply_four_noble_truths(
