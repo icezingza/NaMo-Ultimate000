@@ -1,49 +1,10 @@
 from typing import Dict, List
 from memory_service import memory_service
-from emotion_service import emotion_service
 
 class PersonalizationEngine:
     def __init__(self):
-        pass
-
-    def generate_personalized_response(self, user_id: str,
-                                      current_emotion: str,
-                                      current_message: str) -> Dict:
-        user_memories = memory_service.retrieve_user_context(user_id, days_back=30)
-        user_pattern = memory_service.analyze_memory_pattern(user_id)
-        linked_memories = memory_service.find_linked_memories(user_id, current_emotion)
-
-        current_analysis = emotion_service.analyze_sentiment(current_message)
-
-        base_response = self._generate_base_compassion_response(
-            current_emotion,
-            current_analysis['intensity']
-        )
-
-        personalized_response = self._enhance_with_context(
-            base_response,
-            user_memories,
-            user_pattern,
-            linked_memories,
-            current_emotion
-        )
-
-        return {
-            "personalized_response": personalized_response,
-            "emotion": current_emotion,
-            "intensity": current_analysis['intensity'],
-            "user_pattern": user_pattern,
-            "similar_past_experiences": len(linked_memories),
-            "recommendations": self._generate_recommendations(
-                current_emotion,
-                user_pattern,
-                current_analysis['intensity']
-            )
-        }
-
-    def _generate_base_compassion_response(self, emotion: str,
-                                         intensity: float) -> str:
-        responses = {
+        # Pre-calculate response templates to avoid redundant dictionary creation during requests
+        self.compassion_responses = {
             "sadness": {
                 "high": "ความเศร้าที่คุณรู้สึก... มันสำคัญ ผมรับรู้",
                 "medium": "ความเศร้านี้คือส่วนหนึ่งของการเป็นมนุษย์",
@@ -66,10 +27,52 @@ class PersonalizationEngine:
             }
         }
 
+    def generate_personalized_response(self, user_id: str,
+                                      current_emotion: str,
+                                      current_intensity: float) -> Dict:
+        """
+        Generates a personalized response based on user history and current emotional state.
+
+        Optimization: Accepts current_intensity directly to avoid redundant BERT model calls.
+        """
+        user_memories = memory_service.retrieve_user_context(user_id, days_back=30)
+        user_pattern = memory_service.analyze_memory_pattern(user_id)
+        linked_memories = memory_service.find_linked_memories(user_id, current_emotion)
+
+        # REDUNDANT CALL REMOVED: current_analysis = emotion_service.analyze_sentiment(current_message)
+
+        base_response = self._generate_base_compassion_response(
+            current_emotion,
+            current_intensity
+        )
+
+        personalized_response = self._enhance_with_context(
+            base_response,
+            user_memories,
+            user_pattern,
+            linked_memories,
+            current_emotion
+        )
+
+        return {
+            "personalized_response": personalized_response,
+            "emotion": current_emotion,
+            "intensity": current_intensity,
+            "user_pattern": user_pattern,
+            "similar_past_experiences": len(linked_memories),
+            "recommendations": self._generate_recommendations(
+                current_emotion,
+                user_pattern,
+                current_intensity
+            )
+        }
+
+    def _generate_base_compassion_response(self, emotion: str,
+                                         intensity: float) -> str:
         emotion_key = emotion.lower()
         intensity_key = "high" if intensity > 7 else ("medium" if intensity > 4 else "low")
 
-        return responses.get(emotion_key, {}).get(intensity_key,
+        return self.compassion_responses.get(emotion_key, {}).get(intensity_key,
             "ผมรับรู้ความรู้สึกของคุณ... พยายามเข้าใจมัน")
 
     def _enhance_with_context(self, base_response: str,
