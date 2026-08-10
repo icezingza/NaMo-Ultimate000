@@ -3,15 +3,20 @@ from transformers import pipeline
 
 class EmotionService:
     def __init__(self):
-        self.emotion_classifier = None
+        self._emotion_classifier = None
 
-    def analyze_sentiment(self, text: str) -> Dict:
-        # Lazy load the model on first use for faster startup
-        if self.emotion_classifier is None:
-            self.emotion_classifier = pipeline(
+    @property
+    def emotion_classifier(self):
+        # Lazy load the model to improve startup performance.
+        # The model is only loaded when it's first needed.
+        if self._emotion_classifier is None:
+            self._emotion_classifier = pipeline(
                 "sentiment-analysis",
                 model="distilbert-base-uncased-finetuned-sst-2-english"
             )
+        return self._emotion_classifier
+
+    def analyze_sentiment(self, text: str) -> Dict:
         try:
             result = self.emotion_classifier(text[:512])[0]
             sentiment = result['label']
